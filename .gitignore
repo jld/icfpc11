@@ -5,3 +5,4 @@ a.out
 *.byte
 *.native
 /dist
+/stage
