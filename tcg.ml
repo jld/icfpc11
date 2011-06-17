@@ -81,6 +81,45 @@ let rec spool' t a =
   | _ -> failwith "spool: not a string"
 let spool t = spool' t []
 
+
+type lexp = 
+    V of string
+  | P of tree
+  | L of string * lexp
+  | Af of lexp * lexp
+  | Ai of string * lexp * lexp
+
+let pc c = P (C c)
+
+let rec is_free v = function
+    V v' when v = v' -> true
+  | V _ -> false
+  | P _ -> false
+  | L (v', e) when v = v' -> false
+  | L (_, e) -> is_free v e
+  | Af (e1, e2) -> is_free v e1 || is_free v e2
+  | Ai (v', _, _) when v = v' -> true
+  | Ai (_, e1, e2) -> is_free v e1 || is_free v e2
+
+let rec delam = function
+    Af (e1, e2) -> Af (delam e1, delam e2)
+  | Ai (v, e1, e2) -> Ai (v, delam e1, delam e2)
+  | L (v, e) when not (is_free v e) -> Af (pc K, delam e)
+  | L (v, V v') when v = v' -> pc I
+  | L (v, Af (e, V v')) when v = v' && not (is_free v e) -> delam e
+  | L (v, L (v', e)) -> delam (L (v, delam (L (v', e))))
+  | L (v, Af (e, e')) 
+  | L (v, Ai (_, e, e')) -> Af (Af (pc S, delam (L (v, e))), delam (L (v, e')))
+  | e -> e
+
+let rec lower = function
+    P t -> t
+  | Af (e1, e2)
+  | Ai (_, e1, e2) -> A (lower e1, lower e2)
+  | _ -> failwith "Unlowerable"
+
+let unlam e = lower (delam e)
+
 (*
 type strdiff = 
     Eleft of strdiff

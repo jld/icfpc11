@@ -73,3 +73,7 @@ S (S (K Dec) (K T)) I = \x . Dec T; x
 #      S T[\p.S ((S (K p)) (K p))] (K ((S f) I))
 # ...bees.
 # 
+
+
+((Z Z) (A B C)) => (S (K (S (K (Z Z)))) A B C)
+((Z Z) (A (B C))) => (S (K (S (K (Z Z)) A)) B C)
