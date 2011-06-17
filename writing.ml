@@ -1,4 +1,3 @@
-(* Tree Card Generation *)
 open Defs
 
 type spell =

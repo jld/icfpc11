@@ -1,4 +1,3 @@
-(* Card Communication Guide *)
 open Defs
 
 let string_of_card = function
