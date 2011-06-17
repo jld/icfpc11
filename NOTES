@@ -26,6 +26,31 @@ However, fast persistence requires hard-coding an index
 
 ###
 
+TODO: comms
+TODO: oblivious strategies
 TODO: write simulator
-TODO: write "simple" non-world-aware utilities
-  and stuff using them
+TODO: planning
+
+###
+
+Strategery:
+  blind self-help
+    persistent help (get n) (get n) 8192
+    apply repeatedly, inc, repeat
+    (or: that until 20k, rebuild with 16384, &c)
+    (or: take amount from a slot)
+  blind help and attack:
+    help n n 8k; attack n n 512
+    repeat as needed
+    (as above for scaling considerations)
+  zerg rush:
+    attack 255 255 8k; attack 254 255 8k
+    (or similar for other small values)
+    (could parameterize, but that's hard)
+    (can do this and then something else, but...)
+  anti-zerg:
+    don't use 0 or a small number 
+  semi-guided attacks:
+    find where they're building and double-attack it
+    (then use self-help to heal)
+  
