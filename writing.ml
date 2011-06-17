@@ -77,6 +77,6 @@ let rec condense = function
     P t -> t
   | Af (e1, e2)
   | Ai (_, e1, e2) -> A (condense e1, condense e2)
-  | _ -> failwith "Unlowerable"
+  | _ -> failwith "uncondensable sigil"
 
 let describe e = condense (unravel e)

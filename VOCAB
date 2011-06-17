@@ -1,0 +1,22 @@
+"spell":
+  an arbitrary tree of card applications
+"ritual":
+  a sequence of left/right card applications
+"build":
+  given a ritual, construct the spell resulting from performing it on I
+"incant":
+  given a spell, construct a ritual that builds an extensionally equal spell
+"sigil":
+  expressions of an untyped lambda calculus extended with spell constants
+  and applications can be tagged to declare them imperative WRT a variable
+  (i.e., they should not be performed until that var's lambda is applied)
+"entangled":
+  a variable that occurs free in a sigil
+*"compleat":
+  a sigil having entangled variables (ant.: *"incompleat")
+"unravel":
+  perform abstraction elimination
+"utter":
+  submit a turn
+"hear":
+  read a turn
