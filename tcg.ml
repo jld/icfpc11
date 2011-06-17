@@ -1,21 +1,5 @@
 (* Tree Card Generation *)
-
-type card =
-    I
-  | Zero
-  | Succ
-  | Dbl
-  | Get
-  | Put
-  | S
-  | K
-  | Inc
-  | Dec
-  | Attack
-  | Help
-  | Copy
-  | Revive
-  | Zombie
+open Defs
 
 type tree =
     C of card
@@ -66,7 +50,7 @@ let rec rectify = function
   | A (t, C c) -> A (rectify t, C c)
   | t -> rectify (crank t)
 (* thm: forall t, stringp (rectify t) *)
-
+(* informal thm: forall t1, t2, subexpr (rectify t1) (rectify (A (t1,t2))) *)
 
 type plan =
     Left of card
