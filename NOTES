@@ -1,0 +1,31 @@
+"spell component": a string whose evaluation is pure
+"basic spell": a string that evaluates to I and whose cdr is a component
+"summon": allocate a slot for and evaluate
+
+"prepare": decons a basic spell; summon its cdr and record its car/side
+"cast": do the outermost app of a prepared spell; frees the summon cell
+"imprint": represent casting as a basic spell by using get
+  (the imprint should be cheaper to resummon than the original)
+
+"persistent spell": a spell component that, applied, returns itself
+"persist": convert a prepared spell into a persistent spell \
+           with the same effect under the same casting
+
+"complex spell": like a persistent spell, but changes itself (e.g., inc ctr)
+
+"unbound spell": loops endlessly causing an effect
+"unbind": convert a basic spell into its corresponding bound spell
+
+###
+
+Dynamic register allocation may be important.
+  e.g., the cost of copying stuff to/from small numbers may be worth it
+  Consider that a rectified literal costs 3n, but a copy costs n
+    And literals can't always be eliminated
+However, fast persistence requires hard-coding an index
+
+###
+
+TODO: write simulator
+TODO: write "simple" non-world-aware utilities
+  and stuff using them

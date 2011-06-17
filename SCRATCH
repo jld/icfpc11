@@ -3,19 +3,21 @@ a (b c) = (((S (K a)) b) c)
 
 S X X = S X (I X) = S S I X
 
-((S S) I) ((S dec) dec)
-= ((S (K 
-
 
 right-composition of a card B is a string piece ((S (K [])) B)
+Is anything else usefully representable this way?
 
+
+# Attack launcher:
 S Atk I X Y = Atk X X Y
 
 S (S Atk I) I f X
 
+# This does not actually work. 
 (S (S Atk I) Revive) X Y
 S (S (S Atk I) Revive) f X
 
+# What about a self-sacrificing dec loop?
 S (K Dec) (K T) = \x . Dec T; I
 S (S (K Dec) (K T)) I = \x . Dec T; x
 
@@ -23,3 +25,51 @@ S (S (K Dec) (K T)) I = \x . Dec T; x
 # But can pack in maybe ~100, and takes too long to build
 # (However, as a zombie it could be useful.)
 
+## Persistence:
+# If it's prepared, then
+#   PF x = f x (get #here)
+#        = S f (K (get #here)) x
+#   PF = (S f) (K (get #here))
+# except that that's effectful!
+#   PF = \x.(f x) (get #here)
+#    (S f) ((S (K get)) (K #here))
+
+# Statelessness is possible but may not be worth it.
+#   PF x = f x PF
+#   let PF = S I I G = G G
+#   G G x = (f x) (G G)
+#   let G = S A B
+#   S A B G x = (A G) (B G) x
+#   A G = K f, B G = G G
+#   A = K (K f), B = S I I
+#   so, PF = S I I (S (K (K f)) (S I I))
+# Hm.  If the number is expensive enough (e.g., 7), this wins.
+# Except that PF diverges.  Oops.
+
+# (\m.mm)(\p.\x.(f x) (p p))
+# (SII)T[\p.T[\x.(f x) (p p)]]
+#        ...S T[\x.f x] T[\x. (p p)]
+#           (S f) (K (p p))
+#    ...S T[\p.S f] T[\p.K (p p)]
+#       S (K (S f)) (S (K K) (S I I))
+# (((S I) I) ((S (K (S f))) ((S (K K)) ((S I) I))))
+# ...and that diverges
+#              ...(S (K p) (K p))
+#               ...T[\p. ((S (K p)) (K p))]
+#               ...S T[\p.S (K p)] T[\p.K p]
+#               ...S (S (K S) K) K
+# (((S I) I) ((S (K (S f))) ((S ((S (K S)) K)) K)))
+# ...and that doesn't!
+
+# So, S (K a) (K b) => K (a b) is where the bees are.
+
+## Unbinding
+# UF x = UF ((f x) x)
+# (\m.mm)(\p.\x.((p p) ((f x) x)))
+# (SII)T[\p.T[\x.((p p) ((f x) x))]]
+#        ...S T[\x.p p] T[\x.(f x) x]
+#           S (S (K p) (K p)) (S f I)
+#      T[\p.((S ((S (K p)) (K p))) ((S f) I))]
+#      S T[\p.S ((S (K p)) (K p))] (K ((S f) I))
+# ...bees.
+# 
