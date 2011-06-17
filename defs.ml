@@ -14,3 +14,9 @@ type card =
   | Copy
   | Revive
   | Zombie
+
+type step =
+    Left of card
+  | Right of card
+
+type ritual = step list

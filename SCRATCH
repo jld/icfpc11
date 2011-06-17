@@ -77,3 +77,5 @@ S (S (K Dec) (K T)) I = \x . Dec T; x
 
 ((Z Z) (A B C)) => (S (K (S (K (Z Z)))) A B C)
 ((Z Z) (A (B C))) => (S (K (S (K (Z Z)) A)) B C)
+
+
