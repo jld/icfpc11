@@ -1,0 +1,25 @@
+a . b = ((S (K a)) b)
+a (b c) = (((S (K a)) b) c)
+
+S X X = S X (I X) = S S I X
+
+((S S) I) ((S dec) dec)
+= ((S (K 
+
+
+right-composition of a card B is a string piece ((S (K [])) B)
+
+S Atk I X Y = Atk X X Y
+
+S (S Atk I) I f X
+
+(S (S Atk I) Revive) X Y
+S (S (S Atk I) Revive) f X
+
+S (K Dec) (K T) = \x . Dec T; I
+S (S (K Dec) (K T)) I = \x . Dec T; x
+
+(S I I) that => ...
+# But can pack in maybe ~100, and takes too long to build
+# (However, as a zombie it could be useful.)
+
