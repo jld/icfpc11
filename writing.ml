@@ -51,6 +51,21 @@ type sigil =
   | Ai of string * sigil * sigil
 
 let pc c = P (C c)
+let pnum i = P (num i)
+
+let ax = 
+  let rec ax' = function
+      [] -> pc I
+    | [z] -> z
+    | z::ys -> Af ((ax' ys), z)
+  in
+  fun l -> ax' (List.rev l)
+
+let ienv s = L("get",s)
+let irun = Right Get
+let iax l = ienv (ax l)
+let iget a = Af (V"get",P a)
+let igetn n = iget (num n)
 
 let rec entangled v = function
     V v' when v = v' -> true
