@@ -1,56 +1,32 @@
-"spell component": a string whose evaluation is pure
-"basic spell": a string that evaluates to I and whose cdr is a component
-"summon": allocate a slot for and evaluate
+TODO: test simulator
 
-"prepare": decons a basic spell; summon its cdr and record its car/side
-"cast": do the outermost app of a prepared spell; frees the summon cell
-"imprint": represent casting as a basic spell by using get
-  (the imprint should be cheaper to resummon than the original)
+Stuff to do with simulator to simplebomb:
+  use actual vitalities for "depleted" and "bombed"
+    sort help targets by lowness?
+  maybe switch from number of plays to abstract term complexity
+    (how to compute?  flatten to spell and incant, or...?)
+    rationale: don't want to bomb a term that's already fetched & built on
+    but, that may not waste as much of their time
+    could use moving average of touches, w/ bonus for gets, blah blah blah
+  recover from simple kills with a revive
+  counter-revive: dec attack
+  counter-dec: follow revive with fast help
+  counter-revive: send zombies
+    what's the cheapest zombie to add to a bomb?
+    if the opponent has revive, then a non-zom kill is a waste
+      and will probably get us dead, because they can continue
+       and we blew our rush
+    but if they don't, then a zombomb is extra turns
+  counter-zombie: pay attention and rebuild
+    ugh
 
-"persistent spell": a spell component that, applied, returns itself
-"persist": convert a prepared spell into a persistent spell \
-           with the same effect under the same casting
-
-"complex spell": like a persistent spell, but changes itself (e.g., inc ctr)
-
-"unbound spell": loops endlessly causing an effect
-"unbind": convert a basic spell into its corresponding bound spell
 
 ###
+Old notes:
 
 Dynamic register allocation may be important.
   e.g., the cost of copying stuff to/from small numbers may be worth it
   Consider that a rectified literal costs 3n, but a copy costs n
     And literals can't always be eliminated
-However, fast persistence requires hard-coding an index
-
-###
-
-TODO: comms
-TODO: oblivious strategies
-TODO: write simulator
-TODO: planning
-
-###
-
-Strategery:
-  blind self-help
-    persistent help (get n) (get n) 8192
-    apply repeatedly, inc, repeat
-    (or: that until 20k, rebuild with 16384, &c)
-    (or: take amount from a slot)
-  blind help and attack:
-    help n n 8k; attack n n 512
-    repeat as needed
-    (as above for scaling considerations)
-  zerg rush:
-    attack 255 255 8k; attack 254 255 8k
-    (or similar for other small values)
-    (could parameterize, but that's hard)
-    (can do this and then something else, but...)
-  anti-zerg:
-    don't use 0 or a small number 
-  semi-guided attacks:
-    find where they're building and double-attack it
-    (then use self-help to heal)
-  
+However, fast recursion requires hard-coding an index
+  (so, uh, whatever happened with that?)
