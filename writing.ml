@@ -52,6 +52,7 @@ type sigil =
 
 let pc c = P (C c)
 let pnum i = P (num i)
+let xlet v e1 e2 = Af (L (v,e2), e1)
 
 let ax = 
   let rec ax' = function
@@ -61,11 +62,17 @@ let ax =
   in
   fun l -> ax' (List.rev l)
 
-let ienv s = L("get",s)
+let ienv s = L("_get",s)
 let irun = Right Get
 let iax l = ienv (ax l)
-let iget a = Af (V"get",P a)
+let iget a = Af (V"_get",P a)
 let igetn n = iget (num n)
+
+let scomp f g = L("_x", Af(f, Af(g, V"_x")))
+let rec scompl = function
+    [] -> pc I
+  | [f] -> f
+  | f::g::l -> scompl ((scomp f g)::l)
 
 let rec entangled v = function
     V v' when v = v' -> true
