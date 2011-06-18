@@ -30,6 +30,7 @@ let _ =
 	  perform 85 [irun]
 	done;
       done;
+      perform 0 [Left Put];
       perform 1 [Left Dbl];
       perform 2 [Left Dbl]
     done

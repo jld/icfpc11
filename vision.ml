@@ -167,8 +167,10 @@ let rec apply w f arg =
       (fopp w).(denum arg)
   | C Revive ->
       let vp = vprop w and i = denum arg in
-      if vp.(i) <= 0 then vp.(i) <- 1;
-      w.log <- (Vitals (w.prop, i))::w.log;
+      if vp.(i) <= 0 then begin
+	vp.(i) <- 1;
+	w.log <- (Vitals (w.prop, i))::w.log
+      end;
       C I
   | C Zombie -> Zom1 arg
   | Zom1 i ->
@@ -234,7 +236,7 @@ let rec list_uniq_a l a =
 let zaplog w =
   w.log <- []
 
-let getlog w =
+let takelog w =
   let l = w.log in
   zaplog w;
   list_uniq_a (List.sort compare l) []
