@@ -34,6 +34,33 @@ let rec string_of_value = function
   | Hlp2 (v1,v2) -> "help("^(string_of_value v1)^")("^(string_of_value v2)^")"
   | Zom1 v -> "zombie("^(string_of_value v)^")"
 
+type playernum = int
+type slotnum = int
+type cost = int
+type exnp = bool
+type wlog = 
+    Played of playernum * slotnum * step * cost * exnp
+  | Vitals of playernum * slotnum
+  | Zombied of playernum * slotnum
+  | Gotten of playernum * slotnum
+  | Stolen of playernum * slotnum
+
+let string_of_log = function
+    Played (pl, i, st, co, ep) ->
+      let eff = match st with
+	Left c -> Printf.sprintf "%s(#%d)" (string_of_card c) i
+      | Right c -> Printf.sprintf "#%d(%s)" i (string_of_card c) in
+      Printf.sprintf "Player %d did %s, cost %d%s"
+	pl eff co (if ep then " and it failed." else ".")
+  | Vitals (pl, i) ->
+      Printf.sprintf "Player %d had a vitality change at %d." pl i
+  | Zombied (pl, i) ->
+      Printf.sprintf "Player %d was sent a zombie at %d." pl i
+  | Gotten (pl, i) ->
+      Printf.sprintf "Player %d retrieved a value from %d." pl i
+  | Stolen (pl, i) ->
+      Printf.sprintf "Player %d had a value stolen from %d." pl i
+
 type world = {
     mutable prop: int;
     mutable turn: int;
@@ -41,6 +68,7 @@ type world = {
     mutable zombp: bool;
     v: int array array;
     f: value array array;
+    mutable log: wlog list
    }
 
 let make_world () = {
@@ -48,7 +76,8 @@ let make_world () = {
   v = [|Array.create 256 10000;
 	Array.create 256 10000|];
   f = [|Array.create 256 (C I);
-	Array.create 256 (C I)|]
+	Array.create 256 (C I)|];
+  log = []
 }
 
 let fprop w = w.f.(w.prop)
@@ -77,12 +106,15 @@ let zsub w n a = if w.zombp then do_add n a else do_sub n a
 
 let fget w n =
   if (vprop w).(n) <= 0 then failwith "dead slot";
-  (fprop w).(n)
+  let got = (fprop w).(n) in
+  w.log <- (Gotten (w.prop, n))::w.log;
+  got
 
 let vpay w i n =
   let vp = vprop w in
   if n > vp.(i) then failwith "insufficient vitality";
-  vp.(i) <- vp.(i) - n
+  vp.(i) <- vp.(i) - n;
+  w.log <- (Vitals (w.prop, i))::w.log
 
 
 let rec apply w f arg =
@@ -105,10 +137,12 @@ let rec apply w f arg =
   | C Inc ->
       let vp = vprop w and i = denum arg in
       vp.(i) <- zinc w vp.(i);
+      w.log <- (Vitals (w.prop, i))::w.log;
       C I
   | C Dec ->
       let vo = vopp w and i = denum arg in
-      vo.(255 - i) <- zdec w vo.(255 - 1);
+      vo.(255 - i) <- zdec w vo.(255 - i);
+      w.log <- (Vitals (1 - w.prop, 255 - i))::w.log;
       C I
   | C Attack -> Atk1 arg
   | Atk1 i -> Atk2 (i,arg)
@@ -117,6 +151,7 @@ let rec apply w f arg =
       and vo = vopp w in
       vpay w i n;
       vo.(255 - j) <- zsub w vo.(255 - j) (n * 9 / 10);
+      w.log <- (Vitals (1 - w.prop, 255 - j))::w.log;
       C I
   | C Help -> Hlp1 arg
   | Hlp1 i -> Hlp2 (i,arg)
@@ -125,12 +160,15 @@ let rec apply w f arg =
       and vp = vprop w in
       vpay w i n;
       vp.(j) <- zadd w vp.(j) (n * 11 / 10);
+      if j != i then
+	w.log <- (Vitals (w.prop, j))::w.log;
       C I
   | C Copy ->
       (fopp w).(denum arg)
   | C Revive ->
       let vp = vprop w and i = denum arg in
       if vp.(i) <= 0 then vp.(i) <- 1;
+      w.log <- (Vitals (w.prop, i))::w.log;
       C I
   | C Zombie -> Zom1 arg
   | Zom1 i ->
@@ -138,18 +176,22 @@ let rec apply w f arg =
       if vo.(i) > 0 then failwith "not dead yet";
       (fopp w).(255 - i) <- arg;
       vo.(255 - i) <- -1;
+      w.log <- (Zombied (1 - w.prop, 255 - i))::w.log;
       C I
   | _ -> failwith "type error"
 
 let play w i st = 
+  let exnp = ref false in
   let res =
     try begin match st with
       Left c -> apply w (C c) (fget w i)
     | Right c -> apply w (fget w i) (C c)
     end with
-      _ -> C I
+      _ -> exnp := true; C I
   in
-  (fprop w).(i) <- res
+  (fprop w).(i) <- res;
+  w.log <- (Played (w.prop, i, st, (1000 - w.timer), !exnp))::w.log
+  
 
 let pass' w = 
   w.prop <- 1 - w.prop;
@@ -183,8 +225,19 @@ let world_copy w =
     v = Array.map Array.copy w.v;
     f = Array.map Array.copy w.f }
 
+let rec list_uniq_a l a =
+  match l with
+    [] -> List.rev a
+  | x::y::t when x = y -> list_uniq_a (x::t) a
+  | x::t -> list_uniq_a t (x::a)
 
-(* Simple player shell here. *)
+let getlog w =
+  let l = w.log in
+  w.log <- [];
+  list_uniq_a (List.sort compare l) []
+
+
+(* A simple player shell. *)
 let player_respond w =
   let (i,st) = hear stdin in
   play w i st;
@@ -192,7 +245,7 @@ let player_respond w =
 
 let player_start w =
   let me = int_of_string (Sys.argv.(1)) in
-  if me = 1 then
+  if me == 1 then
     player_respond w;
   me
 
