@@ -244,13 +244,14 @@ let world_dump w =
   for pl = 0 to 1 do
     Printf.eprintf "# Player %d:\n" pl;
     for i = 0 to 255 do
-      if w.v.(pl).(i) != 10000 && w.f.(pl).(i) <> C I then
+      if w.v.(pl).(i) != 10000 || w.f.(pl).(i) <> C I then
 	Printf.eprintf "%d={%d,%s}\n" i
 	  w.v.(pl).(i) (string_of_value w.f.(pl).(i));
     done
   done;
   Printf.eprintf "]][[And this is what's happened lately:\n";
-  List.iter (fun l -> Printf.eprintf "%s\n" (string_of_log l)) w.log;
+  List.iter (fun l -> Printf.eprintf "%s\n" (string_of_log l)) 
+    (List.rev w.log);
   Printf.eprintf "]]\n%!"
 
 
