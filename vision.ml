@@ -231,10 +231,27 @@ let rec list_uniq_a l a =
   | x::y::t when x = y -> list_uniq_a (x::t) a
   | x::t -> list_uniq_a t (x::a)
 
+let zaplog w =
+  w.log <- []
+
 let getlog w =
   let l = w.log in
-  w.log <- [];
+  zaplog w;
   list_uniq_a (List.sort compare l) []
+
+let world_dump w =
+  Printf.eprintf "[[Here's what I think the world looks like:\n";
+  for pl = 0 to 1 do
+    Printf.eprintf "# Player %d:\n" pl;
+    for i = 0 to 255 do
+      if w.v.(pl).(i) != 10000 && w.f.(pl).(i) <> C I then
+	Printf.eprintf "%d={%d,%s}\n" i
+	  w.v.(pl).(i) (string_of_value w.f.(pl).(i));
+    done
+  done;
+  Printf.eprintf "]][[And this is what's happened lately:\n";
+  List.iter (fun l -> Printf.eprintf "%s\n" (string_of_log l)) w.log;
+  Printf.eprintf "]]\n%!"
 
 
 (* A simple player shell. *)
