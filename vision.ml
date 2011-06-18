@@ -1,4 +1,5 @@
 open Defs
+open Speech
 
 type value =
     C of card
@@ -176,3 +177,27 @@ let plan9 w =
 let pass w =
   pass' w;
   plan9 w
+
+let world_copy w =
+  { w with
+    v = Array.map Array.copy w.v;
+    f = Array.map Array.copy w.f }
+
+
+(* Simple player shell here. *)
+let player_respond w =
+  let (i,st) = hear stdin in
+  play w i st;
+  pass w
+
+let player_start w =
+  let me = int_of_string (Sys.argv.(1)) in
+  if me = 1 then
+    player_respond w;
+  me
+
+let player_do w i st =
+  utter stdout i st;
+  play w i st;
+  pass w;
+  player_respond w;
