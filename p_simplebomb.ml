@@ -16,7 +16,7 @@ open Alchemy
 let bombsize = 8192
 let restbig = 8192
 let restlit = 512
-let nrest = (bombsize + restlit - 1) / bombsize
+let nrest = (bombsize + restlit - 1) / restlit
 
 (* To bomb: f[0] <- bombsize; f[2] <- bombN; f[1] <- target; f[2]/0. *)
 
@@ -129,12 +129,13 @@ let rec rest_sm = function
 	rest_sm Next
       else begin
 	match rest_target () with
-	  None -> 
+	  None ->
 	    None
 	| Some tg ->
 	    shadow4 := tg;
+	    (* Printf.eprintf "BEES depl set %d FS\n%!" !shadow3; *)
 	    depleted.(!shadow3) <- true;
-	    rest_sm (LoadTarget (incant (num tg)))
+	    rest_sm (LoadTarget ([Left Put]@(incant (num tg))))
       end
   | LoadTarget (st::ri) ->
       Some (4, st, LoadTarget ri)
@@ -145,6 +146,7 @@ let rec rest_sm = function
   | Triggering _ ->
       rest_sm Release
   | Release ->
+      (* Printf.eprintf "BEES depl clr %d %d RL\n%!" !shadow3 !shadow4; *)
       depleted.(!shadow3) <- false;
       depleted.(!shadow4) <- false;
       rest_sm Next
@@ -212,7 +214,8 @@ let bomb_target bt =
 let _ =
   
   if Sys.argv.(1) = "1" then audify (hear stdin);
-  let rester = ref rest_start in
+  let rester = ref rest_start 
+  and restslice = ref 0 in
   let step_rester () = 
     match rest_sm !rester with
       None -> false
@@ -226,12 +229,15 @@ let _ =
       execute 85 (Left I)
   in
   let sched_rester n =
+    (* Printf.eprintf "BEES resting for %d\n%!" n; *)
     let clock = ref n in
     while !clock > 0 do
       if step_rester () then
 	decr clock
-      else
+      else begin
+	(* Printf.eprintf "BEES discarding %d\n%!" !clock; *)
 	clock := 0
+      end
     done
   in
   let bombing_run sight =
@@ -242,6 +248,7 @@ let _ =
 	0
     | Some targ ->
 	let src = source_of sight targ in
+	(* Printf.eprintf "BEES depl set %d %d BR\n%!" src (succ src); *)
 	depleted.(src) <- true;
 	depleted.(succ src) <- true;
 	perform 1 (incant (num src));
@@ -268,6 +275,12 @@ let _ =
 	main false
     | Some sight ->
 	let advantage = bombing_run sight in
-	sched_rester (advantage / 2);
+	ignore advantage;
+	restslice := !restslice + 3 (* XXX magic number *);
+	sched_rester !restslice;
 	main false
-  in main true
+  in
+  try
+    main true
+  with
+    End_of_file -> ()
