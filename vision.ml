@@ -55,12 +55,6 @@ let vprop w = w.v.(w.prop)
 let fopp w = w.f.(1 - w.prop)
 let vopp w = w.v.(1 - w.prop)
 
-let pass w = 
-  w.prop <- 1 - w.prop;
-  if (w.prop == 0) then
-    w.turn <- w.turn + 1;
-  w.timer <- 1000
-
 
 let sat_succ n = if n < 65535 then succ n else 65535
 let sat_dbl n = if n < 32768 then n lsl 1 else 65535
@@ -145,3 +139,40 @@ let rec apply w f arg =
       vo.(255 - i) <- -1;
       C I
   | _ -> failwith "type error"
+
+let play w i st = 
+  let res =
+    try begin match st with
+      Left c -> apply w (C c) (fget w i)
+    | Right c -> apply w (fget w i) (C c)
+    end with
+      _ -> C I
+  in
+  (fprop w).(i) <- res
+
+let pass' w = 
+  w.prop <- 1 - w.prop;
+  if (w.prop == 0) then
+    w.turn <- w.turn + 1;
+  w.timer <- 1000
+
+let plan9 w =
+  w.zombp <- true;
+  let vp = vprop w and fp = fprop w in
+  for i = 0 to 255 do
+    if vp.(i) < 0 then begin
+      begin try
+	ignore (apply w fp.(i) (C I));
+      with
+	_ -> ()
+      end;
+      fp.(i) <- C I;
+      vp.(i) <- 0;
+      w.timer <- 1000
+    end
+  done;
+  w.zombp <- false
+
+let pass w =
+  pass' w;
+  plan9 w
