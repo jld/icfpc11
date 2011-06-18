@@ -37,12 +37,13 @@ type world = {
     mutable prop: int;
     mutable turn: int;
     mutable timer: int;
+    mutable zombp: bool;
     v: int array array;
     f: value array array;
    }
 
 let make_world () = {
-  prop = 0; turn = 0; timer = 1000;
+  prop = 0; turn = 0; timer = 1000; zombp = false;
   v = [|Array.create 256 10000;
 	Array.create 256 10000|];
   f = [|Array.create 256 (C I);
@@ -60,16 +61,24 @@ let pass w =
     w.turn <- w.turn + 1;
   w.timer <- 1000
 
+
 let sat_succ n = if n < 65535 then succ n else 65535
 let sat_dbl n = if n < 32768 then n lsl 1 else 65535
 
 let do_inc n = if n > 0 && n < 65535 then succ n else n
 let do_dec n = if n > 0 then pred n else n
 
+let zinc w n = if w.zombp then do_dec n else do_inc n
+let zdec w n = if w.zombp then do_inc n else do_dec n
+
 let do_add n a = 
   if n <= 0 then n else if n + a <= 65535 then n + a else 65535
 let do_sub n a =
   if n <= 0 then n else if n - a >= 0 then n - a else 0
+
+let zadd w n a = if w.zombp then do_sub n a else do_add n a
+let zsub w n a = if w.zombp then do_add n a else do_sub n a
+
 
 let fget w n =
   if (vprop w).(n) <= 0 then failwith "dead slot";
@@ -79,6 +88,7 @@ let vpay w i n =
   let vp = vprop w in
   if n > vp.(i) then failwith "insufficient vitality";
   vp.(i) <- vp.(i) - n
+
 
 let rec apply w f arg =
   if w.timer <= 0 then failwith "timeout";
@@ -99,11 +109,11 @@ let rec apply w f arg =
   | K1 x -> x
   | C Inc ->
       let vp = vprop w and i = denum arg in
-      vp.(i) <- do_inc vp.(i);
+      vp.(i) <- zinc w vp.(i);
       C I
   | C Dec ->
       let vo = vopp w and i = denum arg in
-      vo.(255 - i) <- do_dec vo.(255 - 1);
+      vo.(255 - i) <- zdec w vo.(255 - 1);
       C I
   | C Attack -> Atk1 arg
   | Atk1 i -> Atk2 (i,arg)
@@ -111,7 +121,7 @@ let rec apply w f arg =
       let i = denum i and j = denum j and n = denum arg
       and vo = vopp w in
       vpay w i n;
-      vo.(255 - j) <- do_sub vo.(255 - j) (n * 9 / 10);
+      vo.(255 - j) <- zsub w vo.(255 - j) (n * 9 / 10);
       C I
   | C Help -> Hlp1 arg
   | Hlp1 i -> Hlp2 (i,arg)
@@ -119,7 +129,7 @@ let rec apply w f arg =
       let i = denum i and j = denum j and n = denum arg
       and vp = vprop w in
       vpay w i n;
-      vp.(j) <- do_add vp.(j) (n * 11 / 10);
+      vp.(j) <- zadd w vp.(j) (n * 11 / 10);
       C I
   | C Copy ->
       (fopp w).(denum arg)
