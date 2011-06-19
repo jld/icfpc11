@@ -38,7 +38,7 @@ type rite =
   | NoRite
 
 let performance on_done reanimator s ?(p=0) i ?(owned=true) ritf =
-  let todo = ref [] and startedp = ref false in
+  let todo = ref [] and startedp = ref false and deferringp = ref true in
   let restart () =
     match ritf s i with
       FullRite ri ->
@@ -54,12 +54,15 @@ let performance on_done reanimator s ?(p=0) i ?(owned=true) ritf =
 	startedp := false;
 	NeedHelp []
   in
-  ignore (restart ());
   new_goal
     ~name: (Printf.sprintf "Tactics.performance(%d)" i)
     ~deps: [liveness reanimator s ~p i]
     ~priority: p
     ~on_ready: (fun () ->
+      if !deferringp then begin
+	deferringp := false;
+	ignore (restart ())
+      end;
       if !todo = [] then
 	on_done s i restart
       else
