@@ -107,5 +107,8 @@ let slot_alloc s =
     let j = (start + i) mod 256 in
     if s.avail.(j) && s.world.v.(s.me).(j) > 0 then j
     else loop (succ i)
-  in loop 0
+  in
+  let sl = loop 0 in
+  slot_alloc_fixed s sl;
+  sl
 
