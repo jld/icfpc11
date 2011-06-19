@@ -200,7 +200,7 @@ let _ =
 	  (* Come from "dispose of it". *)
 	  2, Left Put
     in new_goal ~name:"P_fancybomb.bombtarget"
-      ~deps: [g_bomb]
+      ~deps:[g_bomb] ~priority:10
       ~on_ready ~on_run s
   in
   let g_help =
