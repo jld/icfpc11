@@ -1,3 +1,13 @@
+TODO, Sunday Morning:
+  fancybomb needs yielding to let healing run
+    priority-monkeying seems annoying; could make int ref vs. mutable int?
+  Consider quick dec (OSG_D) for followup
+    ...if value is higher than n and it's still at 1.
+    but if they try a large heal elsewhere, then they win
+      maybe that buys time?
+
+####
+
 fancybomb:
   bomb: poly artifact that picks type and creates bomb
   targeter: dep bomb, choose target, dyn dep src0 (target -> src juice?)
