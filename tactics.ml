@@ -19,10 +19,11 @@ let is_ident s i =
   s.world.f.(s.me).(i) = C I
 
 let performance on_done reanimator s p i ritf =
-  let doing = ref [] and todo = ref [] in
-  let restart () = 
-    doing := ritf ();
-    todo := !doing
+  let todo = ref [] and startedp = ref false in
+  let restart () =
+    let (nto,nsp) = ritf s i in
+    todo := nto;
+    startedp := nsp
   in
   restart ();
   new_goal
@@ -35,17 +36,18 @@ let performance on_done reanimator s p i ritf =
       else
 	Working)
     ~on_run: (fun () ->
-      if !todo != !doing && is_ident s i then
+      if !startedp && is_ident s i then
 	restart ();
-      if !todo == !doing && not (is_ident s i) then
+      if not !startedp && not (is_ident s i) then
 	(i, Left Put)
       else
 	match !todo with 
 	  h::t ->
 	    todo := t;
+	    startedp := true;
 	    (i, h)
-	| _ ->
-	    failwith "depleted ritual")
+	| [] ->
+	    (i, Left I))
     ~on_remove: (fun () -> slot_free s i)
     s
 
@@ -56,7 +58,22 @@ let poly_artifact =
   performance (fun s i restart ->
     if is_ident s i then (restart (); Working) else Done)
 
-let fixed_rite ri = fun () -> ri
+let fixed_rite ri = fun s i -> (ri, false)
 
 let do_somewhere rean s p ri =
   mono_artifact rean s p (slot_alloc s) (fixed_rite ri)
+
+let numeric_rite nf =
+  fun s i ->
+    let n = (nf ()) in
+    match sched_f s i with
+      Num m when m == n ->
+	([], true)
+    | Num m when succ m == n ->
+	([Left Succ], true)
+    (* Could do more... *)
+    | _ ->
+	((Writing.incant (Writing.num n)), false)
+
+let fixed_numeric_rite n = numeric_rite (fun () -> n)
+
