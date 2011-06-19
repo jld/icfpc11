@@ -30,6 +30,9 @@ type sched = {
     sharing: (string, goal) Hashtbl.t;
   }
 
+let sched_f s i = s.world.f.(s.me).(i)
+let sched_v s i = s.world.v.(s.me).(i)
+
 let new_goal ~name ?(deps = []) ?(priority = 0)
     ?(on_ready = fun () -> NeedHelp [])
     ?(on_run = fun () -> failwith (name^": nothing to do"))
@@ -64,14 +67,17 @@ let gretained g = gretain g; g
 let add_dep requiring required =
   requiring.deps <- (gretained required)::requiring.deps
 
-let findlive s start =
+let find_slot_where p fail start =
   let rec loop i =
-    if i > 255 then 
-      failwith "I see dead people?";
+    if i > 255 then fail () else
     let j = (start + i) mod 256 in
-    if s.world.v.(s.me).(j) > 0 then j
+    if p j then j 
     else loop (succ i)
   in loop 0
+
+let findlive s =
+  find_slot_where (fun i -> sched_v s i > 0)
+    (fun () -> failwith "I see dead people?")
 
 let idle_loop s =
   new_goal ~name: "Goals.idle_loop"
@@ -163,15 +169,9 @@ let slot_free s i =
   s.avail.(i) <- true
 
 let slot_alloc s =
-  let start = 32 + Random.int 96 in
-  let rec loop i =
-    if i > 255 then 
-      raise Not_found;
-    let j = (start + i) mod 256 in
-    if s.avail.(j) && s.world.v.(s.me).(j) > 0 then j
-    else loop (succ i)
-  in
-  let sl = loop 0 in
+  let sl = find_slot_where 
+      (fun i -> s.avail.(i) && sched_v s i > 0)
+      (fun () -> raise Not_found)
+      (32 + Random.int 96) in
   slot_alloc_fixed s sl;
   sl
-
