@@ -91,3 +91,7 @@ let numeric_rite nf =
 
 let fixed_numeric_rite n = numeric_rite (fun () -> n)
 
+
+let rec reanim_simple s p i =
+  let sp = Writing.A (Writing.C Revive, Writing.num i) in
+  [do_somewhere reanim_simple s ~p (Writing.incant sp)]
