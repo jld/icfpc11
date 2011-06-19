@@ -175,7 +175,7 @@ let rec apply w f arg =
   | C Zombie -> Zom1 arg
   | Zom1 i ->
       let vo = vopp w and i = denum i in
-      if vo.(i) > 0 then failwith "not dead yet";
+      if vo.(255 - i) > 0 then failwith "not dead yet";
       (fopp w).(255 - i) <- arg;
       vo.(255 - i) <- -1;
       w.log <- (Zombied (1 - w.prop, 255 - i))::w.log;
