@@ -136,6 +136,7 @@ let _ =
       Even | Odd -> Any | sgh -> sgh in
     match bomb_target s sight with
       Some targ ->
+	let sight = preferred_bomb targ in
 	vsight := sight;
 	FullRite (getbomb !vsight)
     | None ->
