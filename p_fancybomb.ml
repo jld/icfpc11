@@ -182,7 +182,8 @@ let _ =
     and on_run () =
       match !vtarg with
 	Some (targ, src0, g_targ) ->
-	  (* Come from "key it in" via "do so". *)
+	  (* Come from "key it in" via "do so".  Bombs away, pretzel-boy! *)
+	  targetval.(targ) <- 0;
 	  2, bombrun
       | None ->
 	  (* Come from "dispose of it". *)
