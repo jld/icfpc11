@@ -32,6 +32,8 @@ type sched = {
 
 let sched_f s i = s.world.f.(s.me).(i)
 let sched_v s i = s.world.v.(s.me).(i)
+let sched_f' s i = s.world.f.(1 - s.me).(i)
+let sched_v' s i = s.world.v.(1 - s.me).(i)
 
 let gretain g = g.refcnt <- g.refcnt + 1
 let gretained g = gretain g; g
@@ -104,13 +106,16 @@ let end_phase s =
 let untap_phase s =
   List.iter (fun g -> g.state <- Unready) s.goals
 
+let unblocked g =
+  List.for_all (fun g -> g.state == Finished || g.state == Removing) g.deps
+
 let upkeep_phase s =
   let workp = ref true in
   while !workp do
     workp := false;
     List.iter (fun g ->
       if g.state == Unready then
-	if List.for_all (fun g -> g.state == Finished) g.deps then begin
+	if unblocked g then begin
 	  workp := true;
 	  try
 	    match g.on_ready () with
