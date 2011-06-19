@@ -17,7 +17,7 @@ let burn1 = iax[pc Help; igetn 0; igetn 0; ax[pc Get; pnum 1];
 let burn = congeal (describe burn1)
 let br = incant burn
 
-let rean = reanim_null
+let rean = reanim_simple
 let juic = juicer_null
 
 let _ =
@@ -31,7 +31,7 @@ let _ =
   add_dep gpr g1;
   add_dep gpr g2;
   let gburn =
-    let i = ref 0 and j = ref 0 and gi = ref None in
+    let i = ref 240 (* hax *) and j = ref 0 and gi = ref None in
     let rec on_ready () =
       match !gi with
 	None ->
