@@ -47,9 +47,8 @@ let _ =
 	    del_goal s g0;
 	    gi := None;
 	    on_ready ()
-	  end else begin
+	  end else
 	    Working
-	  end
     and on_run () =
       64, irun
     in
