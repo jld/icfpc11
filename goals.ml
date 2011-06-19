@@ -66,8 +66,10 @@ and del_goal s g =
   List.iter (grelease s) g.deps;
   g.on_remove ()
 
+let take_dep requiring required =
+  requiring.deps <- required::requiring.deps
 let add_dep requiring required =
-  requiring.deps <- (gretained required)::requiring.deps
+  take_dep requiring (gretained required)
 
 let find_slot_where p fail start =
   let rec loop i =
