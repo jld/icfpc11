@@ -31,7 +31,7 @@ let bomb0 =
   let core =
     L("i", ax[pc Attack; V"i"; dvi; g0;
 	      pc Attack; svi; dvi; g0;
-	      pc Zombie; dvi]) in
+	      pc Zombie; dvi; dvi]) in
   scompl [core; pc Get; pc Succ]
 
 let bomb1 =
@@ -40,7 +40,7 @@ let bomb1 =
   let core =
     L("i", ax[pc Attack; V"i"; svi; g0;
 	      pc Attack; svi; svi; g0;
-	      pc Zombie; svi]) in 
+	      pc Zombie; svi; svi]) in 
   scompl [core; pc Get; pc Succ]
 
 let bomb0r = incant (describe bomb0)
