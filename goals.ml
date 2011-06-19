@@ -194,3 +194,18 @@ let delay s dt =
       else
 	Dead)
     s
+
+let dump_sched s =
+  List.iter (fun g ->
+    Printf.eprintf "[%d %d] %s, priority %d, is %s and has %sdependencies" 
+      s.me (s.world.turn + 1) g.name g.priority
+      (match g.state with
+	Unready -> "unready"
+      | Blocked -> "blocked"
+      | Runnable -> "runnable"
+      | Finished -> "finished"
+      | Removing -> "being removed")
+      (if g.deps = [] then "no " else "");
+    List.iter (fun g -> Printf.eprintf " %s" g.name) g.deps;
+    Printf.eprintf "\n") s.goals;
+  Printf.eprintf "%!"
