@@ -2,7 +2,7 @@ open Defs
 open Vision
 open Goals
 
-let liveness reanimator s p i =
+let liveness reanimator s ?(p=0) i =
   new_goal
     ~name: (Printf.sprintf "Tactics.liveness(%d)" i)
     ~priority: p
@@ -15,9 +15,9 @@ let liveness reanimator s p i =
 
 let reanim_null s p i = []
 
-let juiciness juicer thresh s p i =
+let juiciness juicer thresh s ?(p=0) i =
   new_goal
-    ~name: (Printf.sprintf "Tactics.juiciness(%d)" i)
+    ~name: (Printf.sprintf "Tactics.juiciness(%d,%d)" i thresh)
     ~priority: p
     ~on_ready: (fun () ->
       if sched_v s i >= thresh then
@@ -32,7 +32,7 @@ let juicer_null s p i t = []
 let is_ident s i =
   sched_f s i = C I
 
-let performance on_done reanimator s p i ritf =
+let performance on_done reanimator s ?(p=0) i ?(owned=true) ritf =
   let todo = ref [] and startedp = ref false in
   let restart () =
     let (nto,nsp) = ritf s i in
@@ -42,7 +42,7 @@ let performance on_done reanimator s p i ritf =
   restart ();
   new_goal
     ~name: (Printf.sprintf "Tactics.performance(%d)" i)
-    ~deps: [liveness reanimator s p i]
+    ~deps: [liveness reanimator s ~p i]
     ~priority: p
     ~on_ready: (fun () ->
       if !todo = [] then
@@ -62,7 +62,7 @@ let performance on_done reanimator s p i ritf =
 	    (i, h)
 	| [] ->
 	    (i, Left I))
-    ~on_remove: (fun () -> slot_free s i)
+    ~on_remove: (fun () -> if owned then slot_free s i)
     s
 
 let mono_artifact = 
@@ -74,8 +74,8 @@ let poly_artifact =
 
 let fixed_rite ri = fun s i -> (ri, false)
 
-let do_somewhere rean s p ri =
-  mono_artifact rean s p (slot_alloc s) (fixed_rite ri)
+let do_somewhere rean s ~p ri =
+  mono_artifact rean s ~p (slot_alloc s) (fixed_rite ri)
 
 let numeric_rite nf =
   fun s i ->
