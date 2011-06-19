@@ -32,14 +32,29 @@ let juicer_null s p i t = []
 let is_ident s i =
   sched_f s i = C I
 
+type rite =
+    FullRite of ritual
+  | PartialRite of ritual
+  | NoRite
+
 let performance on_done reanimator s ?(p=0) i ?(owned=true) ritf =
   let todo = ref [] and startedp = ref false in
   let restart () =
-    let (nto,nsp) = ritf s i in
-    todo := nto;
-    startedp := nsp
+    match ritf s i with
+      FullRite ri ->
+	todo := ri;
+	startedp := false;
+	Working
+    | PartialRite ri ->
+	todo := ri;
+	startedp := true;
+	Working
+    | NoRite ->
+	todo := [];
+	startedp := false;
+	NeedHelp []
   in
-  restart ();
+  ignore (restart ());
   new_goal
     ~name: (Printf.sprintf "Tactics.performance(%d)" i)
     ~deps: [liveness reanimator s ~p i]
@@ -51,7 +66,7 @@ let performance on_done reanimator s ?(p=0) i ?(owned=true) ritf =
 	Working)
     ~on_run: (fun () ->
       if !startedp && is_ident s i then
-	restart ();
+	ignore (restart ());
       if not !startedp && not (is_ident s i) then
 	(i, Left Put)
       else
@@ -70,9 +85,9 @@ let mono_artifact =
 
 let poly_artifact =
   performance (fun s i restart ->
-    if is_ident s i then (restart (); Working) else Done)
+    if is_ident s i then restart () else Done)
 
-let fixed_rite ri = fun s i -> (ri, false)
+let fixed_rite ri = fun s i -> FullRite ri
 
 let do_somewhere rean s ~p ri =
   mono_artifact rean s ~p (slot_alloc s) (fixed_rite ri)
@@ -82,12 +97,12 @@ let numeric_rite nf =
     let n = (nf ()) in
     match sched_f s i with
       Num m when m == n ->
-	([], true)
+	PartialRite []
     | Num m when succ m == n ->
-	([Left Succ], true)
+	PartialRite [Left Succ]
     (* Could do more... *)
     | _ ->
-	((Writing.incant (Writing.num n)), false)
+	FullRite (Writing.incant (Writing.num n))
 
 let fixed_numeric_rite n = numeric_rite (fun () -> n)
 
