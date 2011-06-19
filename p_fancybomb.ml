@@ -58,10 +58,10 @@ let help =
     L("3",
       (ax[pc Help; src; src; big;
 	  pc Help; src; trg; lit])) in
-  scompl [f3; pc Dbl; pc Dbl; pc Dbl; pc Succ]
+  scompl [f3; pc Succ; pc Dbl; pc Succ]
 
 let helpr = incant (describe help)
-let restorer = (incant (congeal (!!Get[num 3])))
+let restorer = (incant (congeal (!!Get[num 8])))
 let helprun = Right Zero
 
 (* State? *)
