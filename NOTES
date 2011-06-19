@@ -1,15 +1,19 @@
 fancybomb:
   bomb: poly artifact that picks type and creates bomb
-  targeter: dep bomb, choose target, dyn dep target (target -> src juice?)
+  targeter: dep bomb, choose target, dyn dep src0 (target -> src juice?)
   bomber: dep targeter, fire
   So... bomber deletes target goal?  Implicitly resets bomb art.
   Need a way to time-delay to let healing run.
+    And need to put it in the right place -- attach to bomb, I guess
   In parallel, healing:
     polyarts for help, restore, big, lit; dep none
     restorer/helper seems to dynamically bind big/lit, but obv. rest->help
     src,targ are temp polyarts, like goalburn g0
     unsure how best to do slot 3 overloading; punt and put helpr in 8
     if the best target is dead, need help from its liveness
+  Also:
+    target selection -- maybe just start with move count
+   
 
 ####
 
