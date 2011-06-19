@@ -61,6 +61,8 @@ and del_goal s g =
 let gretain g = g.refcnt <- g.refcnt + 1
 let gretained g = gretain g; g
 
+let add_dep requiring required =
+  requiring.deps <- (gretained required)::requiring.deps
 
 let findlive s start =
   let rec loop i =

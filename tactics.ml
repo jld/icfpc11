@@ -4,7 +4,7 @@ open Goals
 
 let liveness reanimator s p i =
   new_goal
-    ~name: (Printf.sprintf "liveness(%d)" i)
+    ~name: (Printf.sprintf "Tactics.liveness(%d)" i)
     ~priority: p
     ~on_ready: (fun () ->
       if s.world.v.(s.me).(i) > 0 then
@@ -26,7 +26,7 @@ let performance on_done reanimator s p i ritf =
   in
   restart ();
   new_goal
-    ~name: (Printf.sprintf "performance(%d)" i)
+    ~name: (Printf.sprintf "Tactics.performance(%d)" i)
     ~deps: [liveness reanimator s p i]
     ~priority: p
     ~on_ready: (fun () ->
