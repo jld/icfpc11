@@ -38,13 +38,22 @@ Goals, continued:
     Everything with no unfinished deps becomes ready.
     Everything ready is sorted into runnable or finished
       ...or can it say "no, wait, I need this other work"
-
   So, your liveness goal notices the thing is dead, 
    & says it's not finished anymore.
     When does it allocate its space and create its subgoal?
       Immediately: maybe won't run for a while
       Later: ???
-    
+
+Building/Performing:
+  Mono: if at [], free loc and remove
+  Continuous/Poly: if at [], restart if I else done
+    So, if the end result is I, repeat; else guard against zombies
+  may want to change sequence on restart
+
+Liveness:
+  need recovery; given s i, return help list
+  (where const [] means "I give up; we're hosed.")
+  
 
 ###
 

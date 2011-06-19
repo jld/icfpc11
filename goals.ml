@@ -2,7 +2,8 @@ open Defs
 open Vision
 
 type task_state = 
-    Blocked
+    Unready
+  | Blocked
   | Runnable
   | Finished
   | Removing
@@ -37,7 +38,7 @@ let findlive s start =
 
 let idle_loop () =
   { name = "idle_loop ()";
-    state = Blocked;
+    state = Unready;
     deps = [];
     priority = -1;
     on_ready = (fun s g -> Working);
@@ -51,7 +52,7 @@ let make_sched w me =
   }
 
 let add_goal s g =
-  g.state <- Blocked;
+  g.state <- Unready;
   s.goals <- g::s.goals
 
 let del_goal s g =
@@ -61,21 +62,21 @@ let end_phase s =
   s.goals <- List.filter (fun g -> g.state != Removing) s.goals
 
 let untap_phase s =
-  List.iter (fun g -> g.state <- Blocked) s.goals
+  List.iter (fun g -> g.state <- Unready) s.goals
 
 let upkeep_phase s =
   let workp = ref true in
   while !workp do
     workp := false;
     List.iter (fun g ->
-      if g.state == Blocked then
+      if g.state == Unready then
 	if List.for_all (fun g -> g.state == Finished) g.deps then begin
 	  workp := true;
 	  try
 	    match g.on_ready s g with
 	      Done -> g.state <- Finished
 	    | Working -> g.state <- Runnable
-	    | NeedHelp gs -> g.deps <- gs@g.deps
+	    | NeedHelp gs -> g.state <- Blocked; g.deps <- gs@g.deps
 	    | Dead -> g.state <- Removing
 	  with
 	    e -> (* This will yield a slightly inconsistent state, but... *)
