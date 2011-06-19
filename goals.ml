@@ -13,6 +13,7 @@ type sched = {
     mutable goals: goal list;
   }
 and goal = {
+    name: string;
     mutable state: task_state;
     mutable deps: goal list;
     mutable priority: int;
@@ -35,7 +36,8 @@ let findlive s start =
   in loop 0
 
 let idle_loop () =
-  { state = Blocked;
+  { name = "idle_loop ()";
+    state = Blocked;
     deps = [];
     priority = -1;
     on_ready = (fun s g -> Working);
@@ -55,12 +57,13 @@ let add_goal s g =
 let del_goal s g =
   g.state <- Removing
 
-let reap_goals s =
+let end_phase s =
   s.goals <- List.filter (fun g -> g.state != Removing) s.goals
 
 let untap_phase s =
-  reap_goals s;
-  List.iter (fun g -> g.state <- Blocked) s.goals;
+  List.iter (fun g -> g.state <- Blocked) s.goals
+
+let upkeep_phase s =
   let workp = ref true in
   while !workp do
     workp := false;
@@ -68,15 +71,21 @@ let untap_phase s =
       if g.state == Blocked then
 	if List.for_all (fun g -> g.state == Finished) g.deps then begin
 	  workp := true;
-	  match g.on_ready s g with
-	    Done -> g.state <- Finished
-	  | Working -> g.state <- Runnable
-	  | NeedHelp gs -> g.deps <- gs@g.deps
-	  | Dead -> g.state <- Removing
+	  try
+	    match g.on_ready s g with
+	      Done -> g.state <- Finished
+	    | Working -> g.state <- Runnable
+	    | NeedHelp gs -> g.deps <- gs@g.deps
+	    | Dead -> g.state <- Removing
+	  with
+	    e -> (* This will yield a slightly inconsistent state, but... *)
+	      Printf.eprintf "Goals.upkeep_phase: (%s): exception %s\n%!"
+		g.name (Printexc.to_string e);
+	      g.state <- Removing
 	end) s.goals;
   done
 
-let main_phase s =
+let rec main_phase s =
   let candidates = List.filter (fun g -> g.state == Runnable) s.goals in
   let highest = ref min_int and best = ref None in
   List.iter (fun g ->
@@ -87,7 +96,26 @@ let main_phase s =
   match !best with
     None -> failwith "I have no goals?"
   | Some g ->
-      g.on_run s g
+      try
+	g.on_run s g
+      with
+	e -> (* This will also yield inconsistency, but... *)
+	  Printf.eprintf "Goals.main_phase: (%s): exception %s\n%!"
+	    g.name (Printexc.to_string e);
+	  g.state <- Removing;
+	  main_phase s
+
+let cycle s =
+  try
+    end_phase s;
+    untap_phase s;
+    upkeep_phase s;
+    main_phase s
+  with
+    e -> (* Emergency safeguard.  We're probably toast, but... *)
+      Printf.eprintf "Goals.cycle: exception %s\n%!" 
+	(Printexc.to_string e);
+      (0, Left I)
 
 let slot_alloc_fixed s i =
   if not s.avail.(i) then
