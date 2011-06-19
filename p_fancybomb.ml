@@ -64,6 +64,7 @@ let restorer = (incant (congeal (!!Get[num 8])))
 let helprun = Right Zero
 
 (* State? *)
+let urgent = Array.create 256 false
 let targetval = Array.create 256 0 (* backwards *)
 let note_move i =
   targetval.(255 - i) <- targetval.(255 - i) + 1
@@ -102,27 +103,33 @@ let rec source_of bt i =
   | Odd | Nonzero -> i - 1
   | Any -> source_of (preferred_bomb i) i
 
+let depletion_penalty s = 
+  if sched_f s 5 = Vision.C I then 40 else 20
+
 let bomb_target s bt = 
   let best = ref (-1)
-  and highest = ref (-1) in
+  and highest = ref min_int
+  and dp = depletion_penalty s in
   for i = 0 to 255 do
-    let src = source_of bt i in
-    if targetval.(i) > !highest
-	&& is_target bt i
-	&& not (bombed s i)
-	&& not (depleted s src)
-	&& not (depleted s (succ src))
-    then begin
-      best := i;
-      highest := targetval.(i)
-    end
+    if is_target bt i then
+      let src = source_of bt i in
+      let value = targetval.(i)
+	  - (if depleted s src then dp else 0)
+	  - (if depleted s (succ src) then dp else 0)
+      in
+      if !highest < value && not (bombed s i)
+      then begin
+	best := i;
+	highest := value
+      end
   done;
   if !best >= 0 then Some !best else None
 
-(* Restoring.  *)
-(* ... *)
-
+(* Contingencies. *)
 let rean = reanim_simple
+let juicer_flag s p i t = urgent.(i) <- true; []
+let repleteness s ?(p=0) i =
+  juiciness juicer_flag 9096 s ~p i
 
 let _ =
   Random.self_init ();
@@ -175,15 +182,18 @@ let _ =
 	      (* Found a target for loaded bomb; key it in. *)
 	      let src0 = source_of !vsight targ in
 	      let g_targ = poly_artifact rean s ~p:10 1 ~owned:false
-		  (fixed_numeric_rite src0) in
-	      vtarg := Some (targ, src0, !vsight, g_targ);
-	      NeedHelp [g_targ]
+		  (fixed_numeric_rite src0)
+	      and g_j0 = repleteness s src0
+	      and g_j1 = repleteness s (succ src0) in
+	      let deps = [g_targ; g_j0; g_j1] in
+	      vtarg := Some (targ, src0, !vsight, deps);
+	      NeedHelp deps
 	  end
-      | Some (targ, src0, osight, g_targ) ->
-	  if bombed s targ || depleted s src0 || depleted s (succ src0) || osight <> !vsight
+      | Some (targ, src0, osight, gs) ->
+	  if bombed s targ || osight <> !vsight 
 	  then begin
 	    (* Can't bomb this target; try to find another for same bomb. *)
-	    del_goal s g_targ;
+	    List.iter (grelease s) gs; (* XXX *)
 	    vtarg := None;
 	    on_ready ()
 	  end else
@@ -191,9 +201,10 @@ let _ =
 	    Working
     and on_run () =
       match !vtarg with
-	Some (targ, src0, osight, g_targ) ->
+	Some (targ, src0, osight, gs) ->
 	  (* Come from "key it in" via "do so".  Bombs away, pretzel-boy! *)
-	  targetval.(targ) <- 0;
+	  if (sched_v' s (255 - targ)) <= bombsize * 9 / 10 * 2 (* XXX *) then
+	    targetval.(targ) <- 0;
 	  give_slice ();
 	  2, bombrun
       | None ->
@@ -217,8 +228,10 @@ let _ =
 	  vhelpee := (-1);
 	  let poorest = ref 10000 in
 	  for helpee = 0 to 255 do
-	    if !poorest > sched_v s helpee then begin
-	      poorest := sched_v s helpee;
+	    let weight = sched_v s helpee 
+		- (if urgent.(helpee) then 65536 else 0) in
+	    if weight < !poorest then begin
+	      poorest := weight;
 	      vhelpee := helpee
 	    end
 	  done;
@@ -236,6 +249,9 @@ let _ =
 	    NeedHelp [g_helper; g_helpee]
       | Some (g_helper, g_helpee) ->
 	  if depleted s !vhelper || sched_v s !vhelpee > 10000 then begin
+	    if (sched_v s !vhelpee > 10000) then begin
+	      urgent.(!vhelpee) <- false
+	    end;
 	    del_goal s g_helper;
 	    del_goal s g_helpee;
 	    vghnums := None;
