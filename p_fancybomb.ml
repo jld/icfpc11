@@ -118,7 +118,6 @@ let bomb_target s bt =
       highest := targetval.(i)
     end
   done;
-  Printf.eprintf "bomb_target: best=%d highest=%d\n%!" !best !highest;
   if !best >= 0 then Some !best else None
 
 (* Restoring.  *)
@@ -152,6 +151,17 @@ let _ =
   in
   add_dep g_bomb g_bamt;
   add_dep g_rest g_rhlp;
+  let helpslice = ref 0 and vdhelp = ref None in
+  let give_slice () =
+    helpslice := !helpslice + 3;
+    let dhelp = delay s !helpslice in
+    vdhelp := Some dhelp;
+    take_dep g_bomb dhelp
+  and lose_slice () =
+    match !vdhelp with
+      Some dhelp -> del_goal s dhelp
+    | None -> ()
+  in
   let g_targ = 
     let vtarg = ref None in
     let rec on_ready () =
@@ -184,6 +194,7 @@ let _ =
 	Some (targ, src0, g_targ) ->
 	  (* Come from "key it in" via "do so".  Bombs away, pretzel-boy! *)
 	  targetval.(targ) <- 0;
+	  give_slice ();
 	  2, bombrun
       | None ->
 	  (* Come from "dispose of it". *)
@@ -211,17 +222,18 @@ let _ =
 	      vhelpee := helpee
 	    end
 	  done;
-	  if !vhelpee < 0 || !vhelper < 0 then NeedHelp [] else
-	  let g_helper = poly_artifact rean s 3 ~owned:false
-	      (fixed_numeric_rite !vhelper)
-	  and g_helpee = poly_artifact rean s 4 ~owned:false
-	      (fixed_numeric_rite !vhelpee)
-	  and g_liver = liveness rean s !vhelpee
-	  in
-	  vghnums := Some (g_helper, g_helpee);
-	  add_dep g_helpee g_liver;
-	  grelease s g_liver;
-	  NeedHelp [g_helper; g_helpee]
+	  if !vhelpee < 0 || !vhelper < 0 then begin
+	    lose_slice ();
+	    NeedHelp [] 
+	  end else 
+	    let g_helper = poly_artifact rean s 3 ~owned:false
+		(fixed_numeric_rite !vhelper)
+	    and g_helpee = poly_artifact rean s 4 ~owned:false
+		(fixed_numeric_rite !vhelpee)
+	    in
+	    vghnums := Some (g_helper, g_helpee);
+	    take_dep g_helpee (liveness rean s !vhelpee);
+	    NeedHelp [g_helper; g_helpee]
       | Some (g_helper, g_helpee) ->
 	  if depleted s !vhelper || sched_v s !vhelpee > 10000 then begin
 	    del_goal s g_helper;
