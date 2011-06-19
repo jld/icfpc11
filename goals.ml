@@ -59,7 +59,9 @@ let del_goal s g =
   g.state <- Removing
 
 let end_phase s =
-  s.goals <- List.filter (fun g -> g.state != Removing) s.goals
+  let cleanup = List.filter (fun g -> g.state != Removing) in
+  s.goals <- cleanup s.goals;
+  List.iter (fun g -> g.deps <- cleanup g.deps) s.goals
 
 let untap_phase s =
   List.iter (fun g -> g.state <- Unready) s.goals
