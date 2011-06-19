@@ -46,6 +46,10 @@ let bomb0r = incant (describe bomb0)
 let bomb1r = incant (describe bomb1)
 let bombrun = Right Zero
 
+let snipe l =
+  incant (describe (scompl ([ax[pc S; pc Zombie; pc Dec]]
+			    @(List.map pc l)@[pc Get; pc Succ])))@[Right Zero]
+
 
 (* Help parts *)
 let help =
@@ -66,8 +70,29 @@ let helprun = Right Zero
 (* State? *)
 let urgent = Array.create 256 false
 let targetval = Array.create 256 0 (* backwards *)
-let note_move i =
-  targetval.(255 - i) <- targetval.(255 - i) + 1
+let note_log s l =
+  let me = s.me in
+  let taken = ref 1 in
+  List.iter (function
+      Zombied (pn, sn) when pn != me ->
+	targetval.(255 - sn) <- 0;
+    | _ -> ()) l;
+  List.iter (function
+      Gotten (pn, sn) when pn != me ->
+	Printf.eprintf "note_log: split %d (%d)\n%!" sn 
+	  (targetval.(255 - sn));
+	taken := !taken + (targetval.(255 - sn) + 1) / 2;
+	targetval.(255 - sn) <- targetval.(255 - sn) / 2
+    | _ -> ()) l;
+  List.iter (function
+      Played (pn, sn, _, _, _) when pn != me ->
+	Printf.eprintf "note_log: splat %d (%d)\n%!" sn !taken;
+	targetval.(255 - sn) <-
+	  if sched_f' s sn = Vision.C I
+	  then 0 else targetval.(255 - sn) + !taken;
+	taken := 0;
+    | _ -> ()) l
+
 
 (* Bombing. *)
 let bombed s i =
@@ -122,6 +147,76 @@ let bomb_target s bt =
       end
   done;
   if !best >= 0 then Some !best else None
+
+(* Sniping. *)
+let field_ops = ref false
+let not_worth_it = Array.create 256 false
+
+let sniper s ~p src targ combl =
+  Printf.eprintf "Trying to snipe %d\n%!" targ;
+  try 
+    let i = slot_alloc s in
+    let payload = snipe combl in
+    let magazine = ref payload in
+    let on_ready () =
+      if !magazine = [] then
+	(* We actually finished. *)
+	Dead
+      else if sched_f s 1 <> (Vision.Num src) || sched_v s 1 <= 0 then
+	(* If [1] was changed or died, bail. *)
+	Dead
+      else if sched_v s i <= 0 || (is_ident s i && !magazine != payload) then
+    	(* If [i] is dead or tampered with, assume enemy action. *)
+	(field_ops := true; Dead)
+      else if sched_v' s (255 - targ) > 1 then
+	(* If the target was healed, assume they're wise to us. *)
+	(field_ops := true; Dead)
+      else if targetval.(targ) <= List.length !magazine then
+	(* If it's no longer a reasonable target. *)
+	(Printf.eprintf "BEES %d\n%!" targ; Dead)
+      else
+	(* Okay.  I think that's everything that go wrong. *)
+	Working
+    and on_run () =
+      match !magazine with 
+	h::t -> magazine := t; (i,h)
+      | [] -> (* Shouldn't happen... *) (i, Left I)
+    and on_remove () =
+      slot_free s i
+    in new_goal
+      ~name:(Printf.sprintf "P_fancybomb.sniper(%d,%d,%d)" src targ i)
+      ~priority:p
+      ~on_ready ~on_run ~on_remove
+      s
+  with
+    (* For Not_found, but let's make it a catchall just in case. *)
+    _ -> new_goal ~name:"BEES" ~on_ready:(fun _ -> Dead) s
+
+let covert_ops s ~p =
+  let worthyp x targ =
+    targ >= 0 && targ <= 255 && sched_v' s (255 - targ) == 1 
+      && targetval.(targ) > 10 + 3 * x && not (not_worth_it.(targ))
+  in
+  let on_ready () =
+    if !field_ops then Dead else
+    match sched_f s 1 with
+      Num src ->
+	if worthyp 0 src then
+	  NeedHelp [sniper s ~p src src []]
+	else if worthyp 1 (src + 1) then
+	  NeedHelp [sniper s ~p src (src + 1) [Succ]]
+	else if worthyp 1 (src * 2) then
+	  NeedHelp [sniper s ~p src (2 * src) [Dbl]]
+	else 
+	  NeedHelp []
+    | _ ->
+	NeedHelp []
+  in new_goal
+    ~name: "P_fancybomb.covert_ops"
+    ~priority: p
+    ~on_ready
+    s
+
 
 (* Contingencies. *)
 let rean = reanim_simple
@@ -199,8 +294,6 @@ let _ =
       match !vtarg with
 	Some (targ, src0, osight, gs) ->
 	  (* Come from "key it in" via "do so".  Bombs away, pretzel-boy! *)
-	  if (sched_v' s (255 - targ)) <= bombsize * 9 / 10 * 2 (* XXX *) then
-	    targetval.(targ) <- 0;
 	  give_slice ();
 	  2, bombrun
       | None ->
@@ -264,14 +357,10 @@ let _ =
   in
   ignore g_targ;
   ignore g_help;
-(* later: *)
-  let note_log = function
-      Played (pln, sln, step, cost, ep) when pln != me ->
-	note_move sln
-    | _ -> ()	
-  in try
+  ignore (covert_ops s ~p:20);
+  try
     while true do
-      List.iter note_log (takelog w);
+      note_log s (takelog w);
       let (i, st) = cycle s in
       player_do w i st
     done
