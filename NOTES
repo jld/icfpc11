@@ -1,16 +1,104 @@
-TODO: test simulator
+Goals:
+  Stuff you can do, with dependencies.
+  e.g., I can fire this bomb if 1) it's built, 2) the target is in, 
+    and 3) the sources are able to pay.
+  or, I can play the next step of this ritual if 1) the slot is live,
+    and some dependencies are built/live.
+  dependencies need to be explicit to allow doing closure
+  So, a goal has:
+    is-done, dep-list, start-of-turn check, priority, ???
+    so maybe a goal->bool that can mutate the dep list &c
+      *** called only if all deps are good.
+    and a goal->play if it's selected
+  Building a term:
+    requires the term to be live
+    If we're starting, the term must be I; else put
+    If we're not starting, the term must not be I; else restart
+    send and take the cdr and we're not starting
+  Complex building:
+    Depends on some subterms existing while it's doing its thing.
+    But once it's done, depends only on its own liveness.
+  So...
+    firing the bomb depends on building the bomb and the target addr
+    poking the target addr (and choosing it) can depend on the bomb
+  The liveness goal is responsible for building a revive
+    which means there needs to be a map of available slots          
+    Also means that this is where fancy tactics would go
+      parameterize?
+  There'd also be a minimum life requirement goal
+  The revival goal depends on the liveness of its temp node
+    So if that dies, then spin off another goal to revive *that*,
+      and if we keep dying then we were probably dead anyway.
+  So, temporary goals... remove by memq, I guess.
+
+Goals, continued:
+  A goal is blocked if it has any nonfinished deps, ready otherwise.
+  A ready goal is finished if it says so, runnable otherwise.
+  So, zap everything to blocked, and repeat until fixpoint
+    Everything with no unfinished deps becomes ready.
+    Everything ready is sorted into runnable or finished
+      ...or can it say "no, wait, I need this other work"
+
+  So, your liveness goal notices the thing is dead, 
+   & says it's not finished anymore.
+    When does it allocate its space and create its subgoal?
+      Immediately: maybe won't run for a while
+      Later: ???
+    
+
+###
+
+TODO:
+  make fancybomb
+    add zombies to everything
+    "bombed" by actual vitality
+       bonus: single-source bombs, or abstract them
+         recall that we get succ and dbl for free
+    "depleted" by actual vitality + lock (for planned payments)
+    help targets in order
+
+###
+
+Metagaming.
+
+Suppose you have a dead cell; addrstring N, attacker with it in #0.
+
+Atk: Z(GO)x = 4
+Def: R(NO) = 2+n      (def win if n <= 2)
+Atk: (SDZ)(GO)x = 8
+Def: R(O),I(NO) = 4+2n (def win if n <= 2)
+Atk: (S(SDD)Z)(GO)x = 10
+Def: R(NO),I(NO),I(NO) = 6+3n (def win if n <= 1)
+Def: (S(SRI)I)(NO) = 6+3n (ditto)
+Atk: (S(S(SDD)D)Z)(GO)x = 12
+Def: (S(S(SRI)I)I)(NO) = 8+3n (def win if n <= 1)
+etc.
+
+So...
+Def: ONNRONNINNI
+Atk: DSDSZKSGOx   <- 10
+         ^   ^^
+             DZ
+Def: ONNRONN..R   <- oops
+
+Def: RSISIKSNKSNO
+
+
+
+###
 
 Stuff to do with simulator to simplebomb:
   use actual vitalities for "depleted" and "bombed"
     sort help targets by lowness?
-  maybe switch from number of plays to abstract term complexity
-    (how to compute?  flatten to spell and incant, or...?)
-    rationale: don't want to bomb a term that's already fetched & built on
-    but, that may not waste as much of their time
-    could use moving average of touches, w/ bonus for gets, blah blah blah
+  better targeting:
+    when evaluation does a get, add that term's score to the current one
+    then bound the term above by its discernable complexity
+      length (incant (discern blah))
+    and use that
   recover from simple kills with a revive
   counter-revive: dec attack
   counter-dec: follow revive with fast help
+    but see also the metagaming section, above
   counter-revive: send zombies
     what's the cheapest zombie to add to a bomb?
     if the opponent has revive, then a non-zom kill is a waste

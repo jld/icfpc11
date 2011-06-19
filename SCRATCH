@@ -78,4 +78,41 @@ S (S (K Dec) (K T)) I = \x . Dec T; x
 ((Z Z) (A B C)) => (S (K (S (K (Z Z)))) A B C)
 ((Z Z) (A (B C))) => (S (K (S (K (Z Z)) A)) B C)
 
+Can we be faster?
 
+15: load 0, 8192
+15: load 1, 254
+Atk (G S 0) (S G S 0) (G O)
+= (S Atk S) (G S O) (G O) = 3 + 11
+[44]
+1: ++0
+Atk (G S O) (G S O) (G O)
+= (S Atk I) (G S O) (G O) = 3 + 11
+[59]
+Still kind of pricey
+= (Zom (G S O) X) = 5
+[64]
+
+16: load 1, 255
+15: load 0, 8192
+Atk (S O) (G S O) (G O) = 3 + 7
+[41]
+Atk (O) (G S O) (G O) = 2 + 7
+[50]
+= (Zom (G S O) X) = 5
+[55]
+Hm.
+But, reactive revive beats the zom.
+
+
+Zombie (G S O) (Attack (O) (G S O) (G O))
+\x.Zombie X (Attack (O) X (G O))
+21 + 7 = 28
+28 + 9 = 37 > 34
+37 < 43
+
+16: 255
+O G S D D D D D = 8, not 15
+(similarly, 254->174->9)
+(but need to pick a target immediately)
+(but if the target is too high, they can't beat me with revive and inc)
