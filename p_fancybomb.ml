@@ -176,11 +176,11 @@ let _ =
 	      let src0 = source_of !vsight targ in
 	      let g_targ = poly_artifact rean s ~p:10 1 ~owned:false
 		  (fixed_numeric_rite src0) in
-	      vtarg := Some (targ, src0, g_targ);
+	      vtarg := Some (targ, src0, !vsight, g_targ);
 	      NeedHelp [g_targ]
 	  end
-      | Some (targ, src0, g_targ) ->
-	  if bombed s targ || depleted s src0 || depleted s (succ src0) 
+      | Some (targ, src0, osight, g_targ) ->
+	  if bombed s targ || depleted s src0 || depleted s (succ src0) || osight <> !vsight
 	  then begin
 	    (* Can't bomb this target; try to find another for same bomb. *)
 	    del_goal s g_targ;
@@ -191,7 +191,7 @@ let _ =
 	    Working
     and on_run () =
       match !vtarg with
-	Some (targ, src0, g_targ) ->
+	Some (targ, src0, osight, g_targ) ->
 	  (* Come from "key it in" via "do so".  Bombs away, pretzel-boy! *)
 	  targetval.(targ) <- 0;
 	  give_slice ();
