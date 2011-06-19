@@ -180,3 +180,15 @@ let slot_alloc s =
       (32 + Random.int 96) in
   slot_alloc_fixed s sl;
   sl
+
+let delay s dt =
+  (* This is the worst interval timer implementation ever. *)
+  let t = s.world.turn + dt in
+  new_goal
+    ~name: (Printf.sprintf "delay(%d)" t)
+    ~on_ready: (fun () ->
+      if s.world.turn < t then
+	NeedHelp []
+      else
+	Dead)
+    s
