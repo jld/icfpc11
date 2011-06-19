@@ -10,11 +10,13 @@ type task_state =
 
 type goal = {
     name: string;
+    mutable refcnt: int;
     mutable state: task_state;
     mutable deps: goal list;
     mutable priority: int;
     on_ready: (unit -> readiness);
     on_run: (unit -> (int * step));
+    on_remove: (unit -> unit);
   }
 and readiness =
     Done
@@ -25,7 +27,40 @@ type sched = {
     world: world; me: int;
     avail: bool array;
     mutable goals: goal list;
+    sharing: (string, goal) Hashtbl.t;
   }
+
+let new_goal ~name ?(deps = []) ?(priority = 0)
+    ?(on_ready = fun () -> NeedHelp [])
+    ?(on_run = fun () -> failwith (name^": nothing to do"))
+    ?(on_remove = fun () -> ())
+    s =
+  try 
+    Hashtbl.find s.sharing name
+  with
+    Not_found ->
+      let g = {
+	name = name; refcnt = 1; state = Unready;
+	deps = deps; priority = priority;
+	on_ready = on_ready; on_run = on_run; on_remove = on_remove
+      } in
+      s.goals <- g::s.goals;
+      Hashtbl.add s.sharing name g;
+      g
+
+let rec grelease s g =
+  g.refcnt <- g.refcnt - 1;
+  if g.refcnt <= 0 then del_goal s g
+and del_goal s g =
+  Hashtbl.remove s.sharing g.name;
+  g.refcnt <- 0;
+  g.state <- Removing;
+  List.iter (grelease s) g.deps;
+  g.on_remove ()
+
+let gretain g = g.refcnt <- g.refcnt + 1
+let gretained g = gretain g; g
+
 
 let findlive s start =
   let rec loop i =
@@ -36,30 +71,19 @@ let findlive s start =
     else loop (succ i)
   in loop 0
 
-let add_goal s g =
-  g.state <- Unready;
-  s.goals <- g::s.goals
-
-let del_goal s g =
-  g.state <- Removing
-
 let idle_loop s =
-  let g = {
-    name = "idle_loop";
-    state = Unready;
-    deps = [];
-    priority = -1;
-    on_ready = (fun () -> Working);
-    on_run = (fun () -> (findlive s (Random.int 256), Left I));
-  } in
-  add_goal s g;
-  g
+  new_goal ~name: "Goals.idle_loop"
+    ~priority: (-1)
+    ~on_ready: (fun () -> Working)
+    ~on_run: (fun () -> (findlive s (Random.int 256), Left I))
+    s
 
 let make_sched w me =
   let s = { 
     world = w; me = me;
     avail = Array.create 256 true;
     goals = [];
+    sharing = Hashtbl.create 17;
   } in 
   let _ = idle_loop s in
   s
@@ -85,7 +109,7 @@ let upkeep_phase s =
 	      Done -> g.state <- Finished
 	    | Working -> g.state <- Runnable
 	    | NeedHelp gs -> g.state <- Blocked; g.deps <- gs@g.deps
-	    | Dead -> g.state <- Removing
+	    | Dead -> del_goal s g
 	  with
 	    e -> (* This will yield a slightly inconsistent state, but... *)
 	      Printf.eprintf "Goals.upkeep_phase: %s: exception %s\n%!"
