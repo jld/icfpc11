@@ -8,24 +8,24 @@ type task_state =
   | Finished
   | Removing
 
-type sched = {
-    world: world; me: int;
-    avail: bool array;
-    mutable goals: goal list;
-  }
-and goal = {
+type goal = {
     name: string;
     mutable state: task_state;
     mutable deps: goal list;
     mutable priority: int;
-    on_ready: (sched -> goal -> readiness);
-    on_run: (sched -> goal -> (int * step));
+    on_ready: (unit -> readiness);
+    on_run: (unit -> (int * step));
   }
 and readiness =
     Done
   | Working
   | NeedHelp of goal list
   | Dead
+type sched = {
+    world: world; me: int;
+    avail: bool array;
+    mutable goals: goal list;
+  }
 
 let findlive s start =
   let rec loop i =
@@ -36,27 +36,33 @@ let findlive s start =
     else loop (succ i)
   in loop 0
 
-let idle_loop () =
-  { name = "idle_loop ()";
-    state = Unready;
-    deps = [];
-    priority = -1;
-    on_ready = (fun s g -> Working);
-    on_run = (fun s g -> (findlive s (Random.int 256), Left I));
-  }
-
-let make_sched w me =
-  { world = w; me = me;
-    avail = Array.create 256 true;
-    goals = [idle_loop ()];
-  }
-
 let add_goal s g =
   g.state <- Unready;
   s.goals <- g::s.goals
 
 let del_goal s g =
   g.state <- Removing
+
+let idle_loop s =
+  let g = {
+    name = "idle_loop";
+    state = Unready;
+    deps = [];
+    priority = -1;
+    on_ready = (fun () -> Working);
+    on_run = (fun () -> (findlive s (Random.int 256), Left I));
+  } in
+  add_goal s g;
+  g
+
+let make_sched w me =
+  let s = { 
+    world = w; me = me;
+    avail = Array.create 256 true;
+    goals = [];
+  } in 
+  let _ = idle_loop s in
+  s
 
 let end_phase s =
   let cleanup = List.filter (fun g -> g.state != Removing) in
@@ -75,14 +81,14 @@ let upkeep_phase s =
 	if List.for_all (fun g -> g.state == Finished) g.deps then begin
 	  workp := true;
 	  try
-	    match g.on_ready s g with
+	    match g.on_ready () with
 	      Done -> g.state <- Finished
 	    | Working -> g.state <- Runnable
 	    | NeedHelp gs -> g.state <- Blocked; g.deps <- gs@g.deps
 	    | Dead -> g.state <- Removing
 	  with
 	    e -> (* This will yield a slightly inconsistent state, but... *)
-	      Printf.eprintf "Goals.upkeep_phase: (%s): exception %s\n%!"
+	      Printf.eprintf "Goals.upkeep_phase: %s: exception %s\n%!"
 		g.name (Printexc.to_string e);
 	      g.state <- Removing
 	end) s.goals;
@@ -100,10 +106,10 @@ let rec main_phase s =
     None -> failwith "I have no goals?"
   | Some g ->
       try
-	g.on_run s g
+	g.on_run ()
       with
 	e -> (* This will also yield inconsistency, but... *)
-	  Printf.eprintf "Goals.main_phase: (%s): exception %s\n%!"
+	  Printf.eprintf "Goals.main_phase: %s: exception %s\n%!"
 	    g.name (Printexc.to_string e);
 	  g.state <- Removing;
 	  main_phase s
