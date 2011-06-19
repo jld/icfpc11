@@ -33,13 +33,16 @@ type sched = {
 let sched_f s i = s.world.f.(s.me).(i)
 let sched_v s i = s.world.v.(s.me).(i)
 
+let gretain g = g.refcnt <- g.refcnt + 1
+let gretained g = gretain g; g
+
 let new_goal ~name ?(deps = []) ?(priority = 0)
     ?(on_ready = fun () -> NeedHelp [])
     ?(on_run = fun () -> failwith (name^": nothing to do"))
     ?(on_remove = fun () -> ())
     s =
   try 
-    Hashtbl.find s.sharing name
+    gretained (Hashtbl.find s.sharing name)
   with
     Not_found ->
       let g = {
@@ -60,9 +63,6 @@ and del_goal s g =
   g.state <- Removing;
   List.iter (grelease s) g.deps;
   g.on_remove ()
-
-let gretain g = g.refcnt <- g.refcnt + 1
-let gretained g = gretain g; g
 
 let add_dep requiring required =
   requiring.deps <- (gretained required)::requiring.deps
