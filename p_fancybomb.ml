@@ -79,19 +79,17 @@ let depleted s i =
 type bombsight =
     Even
   | Odd
-  | Nonzero
   | Any
 
 let is_target bt i =
   match bt with
     Even -> i mod 2 == 0
   | Odd -> i mod 2 == 1
-  | Nonzero -> i != 0
   | Any -> true
 
 let getbomb = function
     Even -> bomb0r
-  | Odd | Nonzero -> bomb1r
+  | Odd -> bomb1r
   | Any -> failwith "Not a bomb"
 
 let preferred_bomb i = 
@@ -100,7 +98,7 @@ let preferred_bomb i =
 let rec source_of bt i =
   match bt with
     Even -> i / 2
-  | Odd | Nonzero -> i - 1
+  | Odd -> i - 1
   | Any -> source_of (preferred_bomb i) i
 
 let depletion_penalty s = 
@@ -137,15 +135,13 @@ let _ =
   let me = player_start w in
   let s = make_sched w me in
   stuff s;
-  let vsight = ref Nonzero in
+  let vsight = ref Any in
   let bomb_rite s i =
-    let sight = match !vsight with
-      Even | Odd -> Any | sgh -> sgh in
-    match bomb_target s sight with
+    match bomb_target s Any with
       Some targ ->
 	let sight = preferred_bomb targ in
 	vsight := sight;
-	FullRite (getbomb !vsight)
+	FullRite (getbomb sight)
     | None ->
 	NoRite
   in
