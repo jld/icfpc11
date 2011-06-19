@@ -137,14 +137,16 @@ let _ =
   let me = player_start w in
   let s = make_sched w me in
   stuff s;
-  let vsight = ref Nonzero in
+  let vsight = ref Any
+  and firstbombp = ref true in
   let bomb_rite s i =
-    let sight = match !vsight with
-      Even | Odd -> Any | sgh -> sgh in
+    let sight = if !firstbombp then Nonzero else Any in
+    vsight := sight;
+    firstbombp := false;
     match bomb_target s sight with
       Some targ ->
-	let sight = preferred_bomb targ in
-	vsight := sight;
+	if !vsight != Nonzero then
+	  vsight := preferred_bomb targ;
 	FullRite (getbomb !vsight)
     | None ->
 	NoRite
