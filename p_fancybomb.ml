@@ -22,7 +22,6 @@ let stuff s =
 let bombsize = 8192
 let restbig = 8192
 let restlit = 768
-let nrest = (bombsize + restlit - 1) / restlit
 
 let bomb0 = 
   let svi = ax[pc Succ; V"i"]
