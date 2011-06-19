@@ -7,7 +7,7 @@ let liveness reanimator s p i =
     ~name: (Printf.sprintf "Tactics.liveness(%d)" i)
     ~priority: p
     ~on_ready: (fun () ->
-      if s.world.v.(s.me).(i) > 0 then
+      if sched_v s i > 0 then
 	Done
       else
 	NeedHelp (reanimator s p i))
@@ -15,8 +15,22 @@ let liveness reanimator s p i =
 
 let reanim_null s p i = []
 
+let juiciness juicer thresh s p i =
+  new_goal
+    ~name: (Printf.sprintf "Tactics.juiciness(%d)" i)
+    ~priority: p
+    ~on_ready: (fun () ->
+      if sched_v s i >= thresh then
+	Done
+      else
+	NeedHelp (juicer s p i thresh))
+    s
+
+let juicer_null s p i t = []
+
+
 let is_ident s i =
-  s.world.f.(s.me).(i) = C I
+  sched_f s i = C I
 
 let performance on_done reanimator s p i ritf =
   let todo = ref [] and startedp = ref false in
